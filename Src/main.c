@@ -16,7 +16,6 @@
   ******************************************************************************
   */
 #include "main.h"
-#include "cmsis_os.h"
 
 // Data to be shared by threads
 typedef struct Data {
@@ -33,10 +32,10 @@ SemaphoreHandle_t mutex;
 osThreadId defaultTaskHandle;
 osThreadId buttonTask01Handle;
 
-
 // Function prototypes
 static void MX_GPIO_Init(void);
 static void RTOS_Init(void);
+static void debug(int*);
 static int  writeData(void);
 static int  readData(void);
 void 		SystemClock_Config(void);
@@ -72,8 +71,7 @@ void StartDefaultTask(void const* argument) {
 		xSemaphoreTake(mutex, portMAX_DELAY);
 		int state = readData();
 		xSemaphoreGive(mutex);
-		// add some more peripherals and do stuff based on state
-		osDelay(1);
+		osDelay(10);
 	}
 }
 
@@ -83,16 +81,15 @@ void StartDefaultTask(void const* argument) {
 * @retval None
 */
 void buttonTask(void const* argument) {
-	// main loop for button reading task
 	while (1) {
 		xSemaphoreTake(mutex, portMAX_DELAY);
 		int state = writeData();
 		xSemaphoreGive(mutex);
 		if (state != GPIO_PIN_SET) {
 			HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, GPIO_PIN_SET);
-			osDelay(500);
-			HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, GPIO_PIN_RESET); // LED active low 
-			osDelay(500);
+			osDelay(1000);
+			HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, GPIO_PIN_RESET);	// LED is active low
+			osDelay(1000);
 		}
     }
 }
@@ -115,12 +112,19 @@ static int writeData(void) {
 	if (data.write_buff_idx == 10) {
 		data.write_buff_idx = 0;
 	}
-	// debug
+	debug(&state);
+	return state;
+}
+
+/**
+* @brief Function for debug viewing of variables during runtime
+* @retval None
+*/
+static void debug(int* state) {
 	if ((data.write_buff_idx % 2) == 0) {
 		data.buffer[data.write_buff_idx] = 0;
-		state = 0;
+		*state = 0;
 	}
-	return state;
 }
 
 /**
@@ -157,7 +161,7 @@ void SystemClock_Config(void) {
 	RCC_OscInitStruct.HSICalibrationValue = RCC_HSICALIBRATION_DEFAULT;
 	RCC_OscInitStruct.PLL.PLLState = RCC_PLL_NONE;
 	if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK) {
-	Error_Handler();
+		Error_Handler();
 	}
 
 	RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK|RCC_CLOCKTYPE_SYSCLK
@@ -168,7 +172,7 @@ void SystemClock_Config(void) {
 	RCC_ClkInitStruct.APB2CLKDivider = RCC_HCLK_DIV1;
 
 	if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_0) != HAL_OK) {
-	Error_Handler();
+		Error_Handler();
 	}
 }
 
