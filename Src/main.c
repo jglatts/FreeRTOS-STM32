@@ -17,15 +17,8 @@
   */
 #include "main.h"
 
-// Data to be shared by threads
-typedef struct Data {
-	int buffer[10];
-	int write_buff_idx;
-	int read_buff_idx;
-} Data;
+// Data and mutex for threads
 Data data;
-
-// Data mutex for threads
 SemaphoreHandle_t mutex;
 
 // Handles for threads
@@ -142,9 +135,7 @@ static void RTOS_Init(void) {
 
 	data.write_buff_idx = 0;
 	data.read_buff_idx = 0;
-	for (int i = 0; i < 10; ++i) {
-		data.buffer[i] = 0;
-	}
+	Buff_Init(data.buffer, 0, 10);
 
 }
 
