@@ -62,9 +62,14 @@ int main(void) {
 void StartDefaultTask(void const* argument) {
 	while(1) {
 		xSemaphoreTake(mutex, portMAX_DELAY);
-		int state = readData();
+		int r_state = readData();
+		if (r_state != GPIO_PIN_SET) {
+			HAL_GPIO_WritePin(BUZZ_GPIO_Port, BUZZ_Pin, GPIO_PIN_SET);
+			osDelay(10);
+			HAL_GPIO_WritePin(BUZZ_GPIO_Port, BUZZ_Pin, GPIO_PIN_RESET);
+		}
 		xSemaphoreGive(mutex);
-		osDelay(10);
+		osDelay(1);
 	}
 }
 
@@ -77,15 +82,16 @@ void buttonTask(void const* argument) {
 	while (1) {
 		xSemaphoreTake(mutex, portMAX_DELAY);
 		int state = writeData();
-		xSemaphoreGive(mutex);
 		if (state != GPIO_PIN_SET) {
-			for (int i = 0; i < 100; ++i) {
+			for (int i = 0; i < 5; ++i) {
 				HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, GPIO_PIN_SET);
 				osDelay(100);
 				HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, GPIO_PIN_RESET);	// LED is active low
 				osDelay(100);
 			}
 		}
+		xSemaphoreGive(mutex);
+		osDelay(1);
     }
 }
 
@@ -127,6 +133,10 @@ static void debug(int* state) {
   * @retval None
   */
 static void RTOS_Init(void) {
+	data.write_buff_idx = 0;
+	data.read_buff_idx = 0;
+	Buff_Init(data.buffer, 1, 10);
+
 	mutex = xSemaphoreCreateMutex();
 
 	osThreadDef(defaultTask, StartDefaultTask, osPriorityNormal, 0, 128);
@@ -134,11 +144,6 @@ static void RTOS_Init(void) {
 
 	osThreadDef(buttonTask01, buttonTask, osPriorityNormal, 0, 128);
 	buttonTask01Handle = osThreadCreate(osThread(buttonTask01), NULL);
-
-	data.write_buff_idx = 0;
-	data.read_buff_idx = 0;
-	Buff_Init(data.buffer, 0, 10);
-
 }
 
 /**
@@ -188,6 +193,12 @@ static void MX_GPIO_Init(void) {
 	GPIO_InitStruct.Pull = GPIO_NOPULL;
 	GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
 	HAL_GPIO_Init(LED_GPIO_Port, &GPIO_InitStruct);
+
+	GPIO_InitStruct.Pin = BUZZ_Pin;
+	GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+	GPIO_InitStruct.Pull = GPIO_NOPULL;
+	GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+	HAL_GPIO_Init(BUZZ_GPIO_Port, &GPIO_InitStruct);
 
 	GPIO_InitStruct.Pin = BTN_Pin;
 	GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
