@@ -79,10 +79,12 @@ void buttonTask(void const* argument) {
 		int state = writeData();
 		xSemaphoreGive(mutex);
 		if (state != GPIO_PIN_SET) {
-			HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, GPIO_PIN_SET);
-			osDelay(1000);
-			HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, GPIO_PIN_RESET);	// LED is active low
-			osDelay(1000);
+			for (int i = 0; i < 100; ++i) {
+				HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, GPIO_PIN_SET);
+				osDelay(100);
+				HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, GPIO_PIN_RESET);	// LED is active low
+				osDelay(100);
+			}
 		}
     }
 }
@@ -105,7 +107,7 @@ static int writeData(void) {
 	if (data.write_buff_idx == 10) {
 		data.write_buff_idx = 0;
 	}
-	debug(&state);
+	//debug(&state);
 	return state;
 }
 
